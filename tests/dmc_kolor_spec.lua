@@ -94,9 +94,11 @@ end
 
 
 function suite_setup()
-
 end
 
+function setup()
+	Kolor.purgeNamedColors()
+end
 
 
 --====================================================================--
@@ -294,6 +296,10 @@ function test_hexRgbColorFile()
 
 	local c1, c2
 
+	assert_error( function()
+		c1 = Kolor.getNamedColor( "Dim Gray" )
+	end, "bad set format" )
+
 	Kolor.importColorFile( 'dmc_kolor.named_colors_rgb' )
 
 	c1 = Kolor.getNamedColor( "Dim Gray" )
@@ -310,6 +316,13 @@ function test_hexRgbColorFile()
 		sfmt( "%s<>%s", formatColor( c1 ), formatColor( c2 ) )
 	)
 
+	c1 = Kolor.translateColor( "Navy" )
+	c2 = { 0/255, 0/255, 128/255 }
+	assert_true(
+		TestUtils.colorsAreEqual( c1, c2 ),
+		sfmt( "%s<>%s", formatColor( c1 ), formatColor( c2 ) )
+	)
+
 end
 
 
@@ -318,7 +331,53 @@ function test_hexColorFile()
 
 	local c1, c2
 
+	assert_error( function()
+		c1 = Kolor.getNamedColor( "Dim Gray" )
+	end, "bad set format" )
+
 	Kolor.importColorFile( 'dmc_kolor.named_colors_hex' )
+
+	c1 = Kolor.getNamedColor( "Dim Gray" )
+	c2 = { 105/255, 105/255, 105/255 }
+	assert_true(
+		TestUtils.colorsAreEqual( c1, c2 ),
+		sfmt( "%s<>%s", formatColor( c1 ), formatColor( c2 ) )
+	)
+
+	c1 = Kolor.getNamedColor( "dim gray" )
+	c2 = { 105/255, 105/255, 105/255 }
+	assert_true(
+		TestUtils.colorsAreEqual( c1, c2 ),
+		sfmt( "%s<>%s", formatColor( c1 ), formatColor( c2 ) )
+	)
+
+	c1 = Kolor.getNamedColor( "Navy" )
+	c2 = { 0/255, 0/255, 128/255 }
+	assert_true(
+		TestUtils.colorsAreEqual( c1, c2 ),
+		sfmt( "%s<>%s", formatColor( c1 ), formatColor( c2 ) )
+	)
+
+	c1 = Kolor.translateColor( "Navy" )
+	c2 = { 0/255, 0/255, 128/255 }
+	assert_true(
+		TestUtils.colorsAreEqual( c1, c2 ),
+		sfmt( "%s<>%s", formatColor( c1 ), formatColor( c2 ) )
+	)
+
+end
+
+
+function test_hdrColorFile()
+	-- print( "test_hdrColorFile" )
+
+	local c1, c2
+
+	assert_error( function()
+		c1 = Kolor.getNamedColor( "Dim Gray" )
+	end, "bad set format" )
+
+	Kolor.importColorFile( 'dmc_kolor.named_colors_hdr' )
 
 	c1 = Kolor.getNamedColor( "Dim Gray" )
 	c2 = { 105/255, 105/255, 105/255 }
@@ -334,24 +393,14 @@ function test_hexColorFile()
 		sfmt( "%s<>%s", formatColor( c1 ), formatColor( c2 ) )
 	)
 
-end
-
-
-function test_hdrColorFile()
-	-- print( "test_hdrColorFile" )
-
-	local c1, c2
-
-	Kolor.importColorFile( 'dmc_kolor.named_colors_hdr' )
-
-	c1 = Kolor.getNamedColor( "Dim Gray" )
-	c2 = { 105/255, 105/255, 105/255 }
+	c1 = Kolor.getNamedColor( "navy" )
+	c2 = { 0/255, 0/255, 128/255 }
 	assert_true(
 		TestUtils.colorsAreEqual( c1, c2 ),
 		sfmt( "%s<>%s", formatColor( c1 ), formatColor( c2 ) )
 	)
 
-	c1 = Kolor.getNamedColor( "Navy" )
+	c1 = Kolor.translateColor( "Navy" )
 	c2 = { 0/255, 0/255, 128/255 }
 	assert_true(
 		TestUtils.colorsAreEqual( c1, c2 ),

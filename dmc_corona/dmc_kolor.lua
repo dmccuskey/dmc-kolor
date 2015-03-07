@@ -247,7 +247,7 @@ Kolor.dRGBA ='dRGBA'
 Kolor.hRGBA ='hRGBA'
 Kolor.hRGBdA ='hRGBdA'
 
-Kolor._NAMED_COLORS = {}
+Kolor._NAMED_COLORS = nil -- set to table when loaded
 
 Kolor._VALID_FORMATS = {
 	Kolor.dRGBA,
@@ -268,6 +268,8 @@ Kolor._ALPHA_FUNC = nil -- alpha trans function
 --== Public Functions
 
 
+--== Color Format
+
 function Kolor.getColorFormat()
 	return Kolor._FORMAT
 end
@@ -282,6 +284,9 @@ function Kolor.setColorFormat( value )
 	Kolor._COLOR_FUNC = c
 	Kolor._ALPHA_FUNC = a
 end
+
+
+--== Color Translation
 
 -- colors ( 5,5,5,5 )
 function Kolor.translateColor(...)
@@ -305,6 +310,13 @@ function Kolor.translateAlpha( alpha )
 end
 
 
+--======================================================--
+-- Named-Color Functions
+
+function Kolor.purgeNamedColors()
+	Kolor._NAMED_COLORS = nil
+end
+
 -- Lua path, 'colors.data_file'
 function Kolor.importColorFile( path )
 	assert( type(path)=='string' )
@@ -319,13 +331,16 @@ function Kolor.addColors( struct, params )
 	if params.format==nil then params.format=Kolor._DEFAULT_FORMAT end
 	--==--
 	local c, a = Kolor._getTranslateFunctions( params.format )
+	Kolor._NAMED_COLORS = Kolor._NAMED_COLORS or {}
 	Kolor._processColors( Kolor._NAMED_COLORS, struct, c, a )
 end
 
 function Kolor.getNamedColor( name )
 	assert( type(name)=='string' )
 	--==--
-	return Kolor._NAMED_COLORS[ name ]
+	assert( type(Kolor._NAMED_COLORS)=='table', "Kolor:getNamedColor there are no named colors loaded" )
+	local key = string.lower( name )
+	return Kolor._NAMED_COLORS[ key ]
 end
 
 
@@ -376,7 +391,7 @@ function Kolor._translateColor( c_tbl )
 
 	elseif arg1Type=='string' then
 		-- named color
-		Kolor.getNamedColor( arg1 )
+		color = Kolor.getNamedColor( arg1 )
 
 	else
 		error( sfmt("ERROR dmc_kolor: unknown RGB color type '%s'", type( arg1 ) ))
@@ -408,9 +423,11 @@ function Kolor._processColors( tbl, data, color_f, alpha_f )
 		return color
 	end
 
+	local slower = string.lower
 	for name, value in pairs( data ) do
 		-- print( name, value )
-		tbl[name] = translateColor( value )
+		local key = slower( name )
+		tbl[ key ] = translateColor( value )
 	end
 end
 
