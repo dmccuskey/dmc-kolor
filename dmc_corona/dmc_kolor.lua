@@ -1,50 +1,63 @@
 --====================================================================--
 -- dmc_kolor.lua
 --
---
--- by David McCuskey
--- Documentation: http://docs.davidmccuskey.com/display/docs/dmc_kolor.lua
+-- Documentation: http://docs.davidmccuskey.com/
 --====================================================================--
 
 --[[
 
-Copyright (C) 2013-2014 David McCuskey. All Rights Reserved.
+The MIT License (MIT)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in the
-Software without restriction, including without limitation the rights to use, copy,
-modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
-and to permit persons to whom the Software is furnished to do so, subject to the
-following conditions:
+Copyright (C) 2013-2015 David McCuskey. All Rights Reserved.
 
-The above copyright notice and this permission notice shall be included in all copies
-or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
-FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-DEALINGS IN THE SOFTWARE.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 --]]
 
 
+
+--====================================================================--
+--== DMC Corona Library : DMC Kozy
+--====================================================================--
+
+
 -- Semantic Versioning Specification: http://semver.org/
 
-local VERSION = "1.2.2"
+local VERSION = "2.0.0"
 
 
 
 --====================================================================--
--- Boot Support Methods
+--== DMC Corona Library Config
 --====================================================================--
 
-local Utils = {} -- make copying from dmc_utils easier
+
+
+--====================================================================--
+--== Support Functions
+
+
+local Utils = {} -- make copying from lua_utils easier
 
 function Utils.extend( fromTable, toTable )
 
-	function _extend( fT, tT )
+	local function _extend( fT, tT )
 
 		for k,v in pairs( fT ) do
 
@@ -68,64 +81,49 @@ function Utils.extend( fromTable, toTable )
 end
 
 
+function Utils.propertyIn( list, property )
+	for i = 1, #list do
+		if list[i] == property then return true end
+	end
+	return false
+end
+
+
 
 --====================================================================--
--- DMC Library Config
---====================================================================--
+--== Configuration
 
-local dmc_lib_data, dmc_lib_info, dmc_lib_location
 
--- boot dmc_library with boot script or
+local dmc_lib_data, dmc_lib_info
+
+-- boot dmc_corona with boot script or
 -- setup basic defaults if it doesn't exist
 --
-if false == pcall( function() require( "dmc_library_boot" ) end ) then
-	_G.__dmc_library = {
-		dmc_library={
-			location = ''
-		},
-		func = {
-			find=function( name )
-				local loc = ''
-				if dmc_lib_data[name] and dmc_lib_data[name].location then
-					loc = dmc_lib_data[name].location
-				else
-					loc = dmc_lib_info.location
-				end
-				if loc ~= '' and string.sub( loc, -1 ) ~= '.' then
-					loc = loc .. '.'
-				end
-				return loc .. name
-			end
-		}
+if false == pcall( function() require( 'dmc_corona_boot' ) end ) then
+	_G.__dmc_corona = {
+		dmc_corona={},
 	}
 end
 
-dmc_lib_data = _G.__dmc_library
-dmc_lib_func = dmc_lib_data.func
-dmc_lib_info = dmc_lib_data.dmc_library
-dmc_lib_location = dmc_lib_info.location
-
+dmc_lib_data = _G.__dmc_corona
 
 
 
 --====================================================================--
--- DMC Library : DMC Kolor
+--== DMC Kolor
 --====================================================================--
 
 
 
 --====================================================================--
--- DMC Kolor Config
---====================================================================--
+--== Configuration
+
 
 dmc_lib_data.dmc_kolor = dmc_lib_data.dmc_kolor or {}
 
 local DMC_KOLOR_DEFAULTS = {
-	default_color_space='RGB',
-	cache_is_active=false,
-	make_global=false,
+	default_color_format='dRGBA',
 	-- named_color_file, no default,
-	-- named_color_format, no default,
 }
 
 local dmc_kolor_data = Utils.extend( dmc_lib_data.dmc_kolor, DMC_KOLOR_DEFAULTS )
@@ -133,567 +131,282 @@ local dmc_kolor_data = Utils.extend( dmc_lib_data.dmc_kolor, DMC_KOLOR_DEFAULTS 
 
 
 --====================================================================--
--- Imports
---====================================================================--
-
-local json = require( 'json' )
+--== Imports
 
 
--- only needed for debugging
--- Utils2 = require( dmc_lib_func.find('dmc_utils') )
+-- none
 
 
 
 --====================================================================--
--- Setup, Constants
---====================================================================--
+--== Setup, Constants
 
-local NAMED_COLORS = nil  -- table of colors
-local CACHED_COLORS = {}  -- table of cached colors
 
-local _DISPLAY = _G.display -- reference to the original display object
+local sfmt = string.format
+local tconcat = table.concat
 
-local Display, Kolor
+local Kolor
 
 
 
 --====================================================================--
--- Support Methods
---====================================================================--
+--== Support Functions
 
 
-Utils.IO_ERROR = "io_error"
-Utils.IO_SUCCESS = "io_success"
+local function initialize()
+	-- print( "Kolor Initialize" )
 
-function Utils.readFile( file_path, options )
-	-- print( "Utils.readFile", file_path )
+	Kolor.setColorFormat( dmc_kolor_data.default_color_format )
 
-	options = options or {}
-	if options.lines == nil then options.lines = true end
-
-	local contents -- either string or table of strings
-	local ret_val = {} -- an array, [ status, content ]
-
-	if file_path == nil then
-		local ret_val = { Utils.IO_ERROR, "file path is NIL" }
-
-	else
-		local fh, reason = io.open( file_path, "r" )
-		if fh == nil then
-			print("ERROR: datastore load settings: " .. tostring( reason ) )
-			ret_val = { Utils.IO_ERROR, reason }
-
-		else
-			if options.lines == false then
-				-- read contents in one big string
-				contents = fh:read( '*all' )
-
-			else
-				-- read all contents of file into a table
-				contents = {}
-				for line in fh:lines() do
-					table.insert( contents, line )
-				end
-
-			end
-
-			ret_val = { Utils.IO_SUCCESS, contents }
-			io.close( fh )
-
-		end  -- fh == nil
-	end  -- file_path == nil
-
-	return ret_val[1], ret_val[2]
-end
-
-
-
-function readInNamedColors( file, format )
-	-- print( 'readInNamedColors' )
-
-	local options = options or {}
-	options.lines = false
-
-	local file_path, status, data
-	file_path = system.pathForFile( file, system.ResourceDirectory )
-
-	if file_path ~= nil then
-		status, data = Utils.readFile( file_path, options )
-		if status == Utils.IO_ERROR then
-			NAMED_COLORS = nil
-		else
-			NAMED_COLORS = json.decode( data )
-		end
+	if dmc_kolor_data.named_color_file then
+		Kolor.importColorFile( dmc_kolor_data.named_color_file )
 	end
-
-	function RGBToHDR( colors )
-		-- print( 'RGBToHDR' )
-		for k,v in pairs( colors ) do
-			colors[k] = { v[1]/255, v[2]/255, v[3]/255, v[4] }
-			-- print( colors[k][1], colors[k][2], colors[k][3], colors[k][4] )
-		end
-	end
-	function HEXToHDR( colors )
-		-- print( 'HEXToHDR' )
-		for k,v in pairs( colors ) do
-			local hex, alpha
-			if type(v) == 'table' then
-				hex, alpha = v[1], v[2]
-			else
-				hex, alpha = v, nil
-			end
-			colors[k] = {
-				tonumber( string.sub( hex, 1, 2 ), 16 )/255,
-				tonumber( string.sub( hex, 3, 4 ), 16 )/255,
-				tonumber( string.sub( hex, 5, 6 ), 16 )/255,
-				alpha
-			}
-			--[[
-			-- output RGB, for creating named color file
-			colors[k] = {
-				tonumber( string.sub( hex, 1, 2 ), 16 ),
-				tonumber( string.sub( hex, 3, 4 ), 16 ),
-				tonumber( string.sub( hex, 5, 6 ), 16 ),
-				alpha
-			}
-			--]]
-			-- print( colors[k][1], colors[k][2], colors[k][3], colors[k][4] )
-		end
-	end
-
-	--[[
-	-- for creating named color file
-	function outputToJSON( colors )
-		-- print( 'outputToJSON' )
-
-		local format = 'HDR' -- HDR, RGB
-		local final, str = "", ""
-		local sorter = {}
-		local new_colors = {}
-		for k,v in pairs( colors ) do
-			table.insert( sorter, k )
-			str = '\n"'..k..'": [ ' .. table.concat( { colors[k][1], colors[k][2], colors[k][3] }, ', ' ) .. ' ],'
-			new_colors[k] = str
-		end
-
-		table.sort(sorter)
-
-		for i,v in ipairs( sorter ) do
-			str = new_colors[v]
-			final = final .. str
-		end
-
-		print( final )
-
-	end
---]]
-
-	if NAMED_COLORS ~= nil then
-		if dmc_kolor_data.named_color_format == 'HEX' then
-			HEXToHDR( NAMED_COLORS )
-		elseif dmc_kolor_data.named_color_format == 'RGB' then
-			RGBToHDR( NAMED_COLORS )
-		end
-		-- to create named files
-		-- outputToJSON( NAMED_COLORS )
-	end
-
 
 end
 
 
--- if we have file with named colors then process it
---
-if dmc_kolor_data.named_color_file and dmc_kolor_data.named_color_format then
-	readInNamedColors( dmc_kolor_data.named_color_file, dmc_kolor_data.named_color_format )
+--== Decimal Alpha to HDR
+
+local function dAToHDR( value )
+	assert( value>=0 and value<=1, "incorrect range for alpha" )
+	return value
 end
 
 
+--== Hex Alpha to HDR
 
-function translateRGBToHDR( ... )
-	-- print( 'translateRGBToHDR' )
+local function hAToHDR( value )
+	assert( value>=0 and value<=255, "incorrect range for alpha" )
+	return value/255
+end
 
+
+--== Decimal RGB to HDR
+
+local function dRGBToHDR( ... )
+	local args = {...}
+	assert( args[1]>=0 and args[1]<=1 )
+	assert( args[2]>=0 and args[2]<=1 )
+	assert( args[3]>=0 and args[3]<=1 )
+	if args[4] then
+		assert( args[4]>=0 and args[4]<=1, "incorrect range for alpha" )
+	end
+	return {...}
+end
+
+
+--== Hex RGB to HDR
+
+-- translate 255 to 1.0
+local function hRGBToHDR( ... )
+	-- print( "hRGBToHDR" )
 	local args = { ... }
-	local color
 
-	if type( args[2] ) == 'number' then
-
-		-- regular RGB
-		color = { args[2]/255, args[3]/255, args[4]/255, args[5] }
-
-	elseif type( args[2] ) == 'table' and args[2].type=='gradient' then
-
-		-- gradient RGB
-		t = args[2].color1
-		args[2].color1 = { t[1]/255, t[2]/255, t[3]/255, t[4] }
-
-		t = args[2].color2
-		args[2].color2 = { t[1]/255, t[2]/255, t[3]/255, t[4] }
-
-		color = { args[2] }
-
-	elseif type( args[2] ) == 'string' then
-
-		-- named color
-		color = NAMED_COLORS and NAMED_COLORS[ args[2] ]
-		if not color then
-			color = { 1, 1, 1 }
-			print('\n')
-			print( 'ERROR dmc_kolor: named color not found', tostring( args[2] ) )
-			print('\n')
-		end
-		color[4] = args[3]
-
+	if args[2] == nil then
+		-- greyscale
+		args[2] = args[1]
+		args[3] = args[1]
+	elseif args[3] == nil then
+		-- greyscale with alpha
+		args[2] = args[1]
+		args[3] = args[1]
+		args[4] = Kolor.translateAlpha( args[2] )
+	elseif args[4] == nil then
+		-- RGB, no alpha
 	else
-		print('\n')
-		print( 'ERROR dmc_kolor: invalid RGB color type', type( args[2] ) )
-		print('\n')
+		-- RGB, with alpha
+		args[4] = Kolor.translateAlpha( args[4] )
 	end
 
-	-- print( color[1], color[2], color[3], color[4] )
-
-	return color
+	return { args[1]/255, args[2]/255, args[3]/255, args[4] }
 end
 
 
+--== Hex String to HDR
 
--- gives back methods, but will work with named colors, defined in HDR
---
-function translateHDRToHDR( ... )
-	-- print( 'translateHDRToHDR' )
-
-	local args = { ... }
-	local color
-
-	if type( args[2] ) == 'number' then
-
-		-- regular HDR
-		color = { args[2], args[3], args[4], args[5] }
-
-	elseif type( args[2] ) == 'table' and args[2].type=='gradient' then
-
-		-- gradient HDR
-		color = { args[2] }
-
-	elseif type( args[2] ) == 'string' then
-
-		-- named color HDR
-		color = NAMED_COLORS and NAMED_COLORS[ args[2] ]
-		if not color then
-			color = { 1, 1, 1 }
-			print('\n')
-			print( 'ERROR dmc_kolor: named color not found', tostring( args[2] ) )
-			print('\n')
-		end
-		color[4] = args[3]
-
-	else
-		print('\n')
-		print( 'ERROR dmc_kolor: invalid HDR color type', type( args[2] ) )
-		print('\n')
-	end
-
-	return color
+-- #FF00FF to { 1, 0, 1 }
+local function HexToHDR( hex, alpha )
+	-- print( "HexToHDR", hex, alpha )
+	local value = hex:gsub("#","")
+	return {
+		tonumber( "0x"..value:sub(1,2) ) / 255,
+		tonumber( "0x"..value:sub(3,4) ) / 255,
+		tonumber( "0x"..value:sub(5,6) ) / 255,
+		Kolor.translateAlpha( alpha )
+	}
 end
+
 
 
 
 --====================================================================--
--- Display Class Setup
+--== Kolor Setup
 --====================================================================--
 
-Display = {}
-
-setmetatable( Display, { __index=_DISPLAY } )
-
-
--- imbue object with fillColor magic
---
-function Display._modifySetFillColor( o )
-	-- print( 'modifySetFillColor' )
-
-	-- cached version
-	--[[
-	function createClosure( obj, translate )
-		local f = function( ... )
-			local args = { ... }
-			local key, color
-			if type( args[2] ) == 'number' and dmc_kolor_data.cache_is_active == true then
-				-- check cache
-				key = table.concat( { tostring(args[2]), tostring(args[3]), tostring(args[4]), tostring(args[5]) }, '-' )
-				color = CACHED_COLORS[key]
-			end
-			if color == nil then
-				color = translate( ... )
-				if key then CACHED_COLORS[ key ] = color end
-			end
-			-- print( color[1], color[2], color[3], color[4] )
-			obj:_setFillColor( unpack( color ) )
-		end
-		return f
-	end
-	--]]
-
-	function createClosure( obj, translate )
-		local f = function( ... )
-			local color = translate( ... )
-			obj:_setFillColor( unpack( color ) )
-		end
-		return f
-	end
-
-	o._setFillColor = o.setFillColor
-
-	o.setFillRGB = createClosure( o, translateRGBToHDR )
-	o.setFillHDR = createClosure( o, translateHDRToHDR )
-
-end
-
-
--- imbue object with strokeColor magic
---
-function Display._modifySetStrokeColor( o )
-	-- print( 'Display._modifySetStrokeColor' )
-
-	-- cached version
-	--[[
-	function createClosure( obj, translate )
-		local f = function( ... )
-			local args = { ... }
-			local key, color
-			if type( args[2] ) == 'number' and dmc_kolor_data.cache_is_active == true then
-				-- check cache
-				key = table.concat( { tostring(args[2]), tostring(args[3]), tostring(args[4]), tostring(args[5]) }, '-' )
-				color = CACHED_COLORS[key]
-			end
-			if color == nil then
-				color = translate( ... )
-				if key then CACHED_COLORS[ key ] = color end
-			end
-			-- print( color[1], color[2], color[3], color[4] )
-			obj:_setStrokeColor( unpack( color ) )
-		end
-		return f
-	end
-	--]]
-
-	function createClosure( obj, translate )
-		-- print('createClosure stroke')
-		local f = function( ... )
-			local color = translate( ... )
-			obj:_setStrokeColor( unpack( color ) )
-		end
-		return f
-	end
-
-	o._setStrokeColor = o.setStrokeColor
-
-	o.setStrokeRGB = createClosure( o, translateRGBToHDR )
-	o.setStrokeHDR = createClosure( o, translateHDRToHDR )
-
-end
-
-
-
-function Display.newCircle( ... )
-	-- print( 'Display.newCircle' )
-
-	local o = _DISPLAY.newCircle( ... )
-
-	Display._modifySetFillColor( o )
-	Display._modifySetStrokeColor( o )
-
-	return o
-end
-
-
-function Display.newLine( ... )
-	-- print( 'Display.newLine' )
-
-	local o = _DISPLAY.newLine( ... )
-
-	Display._modifySetStrokeColor( o )
-
-	return o
-end
-
-
-function Display.newPolygon( ... )
-	-- print( 'Display.newPolygon' )
-
-	local o = _DISPLAY.newPolygon( ... )
-
-	Display._modifySetFillColor( o )
-	Display._modifySetStrokeColor( o )
-
-	return o
-end
-
-
-function Display.newRect( ... )
-	-- print( 'Display.newRect' )
-
-	local o = _DISPLAY.newRect( ... )
-
-	Display._modifySetFillColor( o )
-	Display._modifySetStrokeColor( o )
-
-	return o
-end
-
-
-function Display.newRoundedRect( ... )
-	-- print( 'Display.newRoundedRect' )
-
-	local o = _DISPLAY.newRoundedRect( ... )
-
-	Display._modifySetFillColor( o )
-	Display._modifySetStrokeColor( o )
-
-	return o
-end
-
-
-function Display.newText( ... )
-	-- print( 'Display.newText' )
-
-	local o = _DISPLAY.newText( ... )
-
-	Display._modifySetFillColor( o )
-	Display._modifySetStrokeColor( o )
-
-	return o
-end
-
-
-
---====================================================================--
--- Kolor Class Setup
---====================================================================--
 
 Kolor = {}
-setmetatable( Kolor, { __index=Display } )
+
+Kolor.dRGBA ='dRGBA'
+Kolor.hRGBA ='hRGBA'
+Kolor.hRGBdA ='hRGBdA'
+
+Kolor._NAMED_COLORS = {}
+
+Kolor._VALID_FORMATS = {
+	Kolor.dRGBA,
+	Kolor.hRGBA,
+	Kolor.hRGBdA,
+}
+Kolor._DEFAULT_FORMAT = Kolor.dRGBA
 
 
-function Kolor.newCircle( ... )
-	-- print( 'Kolor.newCircle' )
+--== Set during initialize()
+Kolor._FORMAT = nil -- set format
+Kolor._COLOR_FUNC = nil -- color trans function
+Kolor._ALPHA_FUNC = nil -- alpha trans function
 
-	local o = Display.newCircle( ... )
 
-	-- set the default behavior
-	if dmc_kolor_data.default_color_space == 'HDR' then
-		o.setStrokeColor = o.setStrokeHDR
-		o.setFillColor = o.setFillHDR
-	else
-		o.setStrokeColor = o.setStrokeRGB
-		o.setFillColor = o.setFillRGB
-	end
 
-	return o
+--====================================================================--
+--== Public Functions
+
+
+function Kolor.getColorFormat()
+	return Kolor._FORMAT
+end
+
+function Kolor.setColorFormat( value )
+	-- print( "Kolor.setColorFormat", value )
+	assert( type(value)=='string', sfmt( "Kolor.setColorFormat, expected type 'string', got '%s'", tostring(type(value)) ))
+	--==--
+	local c, a = Kolor._getTranslateFunctions( value )
+
+	Kolor._FORMAT = value
+	Kolor._COLOR_FUNC = c
+	Kolor._ALPHA_FUNC = a
 end
 
 
-function Kolor.newLine( ... )
-	-- print( 'Kolor.newLine' )
+function Kolor.translateColor(...)
+	local args = {...}
+	local tstr = tostring
+	local color, tmp, key
+	local arg1 = args[1]
 
-	local o = Display.newLine( ... )
+	if type( arg1 )=='number' then
+		-- regular RGB
+		color = Kolor._COLOR_FUNC(...)
 
-	-- set the default behavior
-	print( '\n' )
-	print( 'WARNING dmc_kolor: there is a bug in Corona newLine. use setStrokeRGB() instead' )
-	print( '\n' )
-	--[[
-	if dmc_kolor_data.default_color_space == 'HDR' then
-		o.setStrokeColor = o.setStrokeHDR
+	elseif type( arg1 )=='table' and arg1.type=='gradient' then
+		-- gradient RGB
+		tmp = arg1
+		tmp.color1 = Kolor._COLOR_FUNC( tmp.color1 )
+		tmp.color2 = Kolor._COLOR_FUNC( tmp.color2 )
+		color = tmp
+
+	elseif type( arg1 ) == 'string' and arg1:sub(1,1)=='#' then
+		-- hex string
+		color = HexToHDR( arg1, args[2] )
+
+	elseif type( arg1 ) == 'string' then
+		-- named color
+		Kolor.getNamedColor( arg1 )
+
 	else
-		o.setStrokeColor = o.setStrokeRGB
+		error( sfmt("ERROR dmc_kolor: unknown RGB color type '%s'", type( arg1 ) ))
 	end
-	--]]
 
-	return o
+	return color
+end
+
+function Kolor.translateAlpha( alpha )
+	if not alpha then return alpha end
+	return Kolor._ALPHA_FUNC( alpha )
 end
 
 
-function Kolor.newPolygon( ... )
-	-- print( 'Kolor.newPolygon' )
-
-	local o = Display.newPolygon( ... )
-
-	if dmc_kolor_data.default_color_space == 'HDR' then
-		o.setStrokeColor = o.setStrokeHDR
-		o.setFillColor = o.setFillHDR
-	else
-		o.setStrokeColor = o.setStrokeRGB
-		o.setFillColor = o.setFillRGB
-	end
-
-	return o
+-- Lua path, 'colors.data_file'
+function Kolor.importColorFile( path )
+	assert( type(path)=='string' )
+	--==--
+	local cf = require( path )
+	cf.initialize( Kolor )
 end
 
-
-function Kolor.newRect( ... )
-	-- print( 'Kolor.newRect' )
-
-	local o = Display.newRect( ... )
-
-	if dmc_kolor_data.default_color_space == 'HDR' then
-		o.setStrokeColor = o.setStrokeHDR
-		o.setFillColor = o.setFillHDR
-	else
-		o.setStrokeColor = o.setStrokeRGB
-		o.setFillColor = o.setFillRGB
-	end
-
-	return o
+function Kolor.addColors( struct, params )
+	assert( type(struct)=='table' )
+	params = params or {}
+	if params.format==nil then params.format=Kolor._DEFAULT_FORMAT end
+	--==--
+	local c, a = Kolor._getTranslateFunctions( params.format )
+	Kolor._processColors( Kolor._NAMED_COLORS, struct, c, a )
 end
 
-
-function Kolor.newRoundedRect( ... )
-	-- print( 'Kolor.newRoundedRect' )
-
-	local o = Display.newRoundedRect( ... )
-
-	if dmc_kolor_data.default_color_space == 'HDR' then
-		o.setStrokeColor = o.setStrokeHDR
-		o.setFillColor = o.setFillHDR
-	else
-		o.setStrokeColor = o.setStrokeRGB
-		o.setFillColor = o.setFillRGB
-	end
-
-	return o
-end
-
-
-function Kolor.newText( ... )
-	-- print( 'Kolor.newText' )
-
-	local o = Display.newText( ... )
-
-	if dmc_kolor_data.default_color_space == 'HDR' then
-		o.setStrokeColor = o.setStrokeHDR
-		o.setFillColor = o.setFillHDR
-	else
-		o.setStrokeColor = o.setStrokeRGB
-		o.setFillColor = o.setFillRGB
-	end
-
-	return o
+function Kolor.getNamedColor( name )
+	assert( type(name)=='string' )
+	--==--
+	return Kolor._NAMED_COLORS[ name ]
 end
 
 
 
 --====================================================================--
--- Final Setup
+--== Private Functions
+
+
+function Kolor._getTranslateFunctions( format )
+	assert( Utils.propertyIn( Kolor._VALID_FORMATS, format ), sfmt( "Kolor.setColorFormat unknown color format '%s'", tostring(format) ))
+	--==--
+	local c, a
+	if format == Kolor.dRGBA then
+		c = dRGBToHDR
+		a = dAToHDR
+	elseif format==Kolor.hRGBA then
+		c = hRGBToHDR
+		a = hAToHDR
+	else -- hRGBdA
+		c = hRGBToHDR
+		a = dAToHDR
+	end
+	return c, a
+end
+
+
+-- _processColors()
+-- loop through key/value in table
+-- translate color, put in color table
+--
+function Kolor._processColors( tbl, data, color_f, alpha_f )
+
+	local function translateColor(...)
+		local args = {...}
+		local color
+
+		if type( args[1] )=='table' then
+			color = color_f( unpack( args[1] ) )
+		elseif type( args[1] ) == 'string' and args[1]:sub(1,1)=='#' then
+			color = HexToHDR( args[1], args[2] )
+		else
+			error( sfmt("ERROR dmc_kolor: unknown RGB color type '%s'", type( args[1] ) ))
+		end
+
+		return color
+	end
+
+	for name, color in pairs( data ) do
+		-- print( name, color )
+		tbl[name] = translateColor( color )
+	end
+end
+
+
+
+--====================================================================--
+--== Kolor Setup
 --====================================================================--
 
--- replace original display object with one of ours
 
-if dmc_kolor_data.make_global == true then
-	_G.display = Kolor
-else
-	_G.display = Display
-end
+initialize()
 
 
 return Kolor
