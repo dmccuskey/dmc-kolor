@@ -200,18 +200,18 @@ end
 local function hRGBToHDR( c_tbl )
 	-- print( "hRGBToHDR" )
 	if c_tbl[2] == nil then
-		-- greyscale
+		-- 1 digit, greyscale
 		c_tbl[2] = c_tbl[1]
 		c_tbl[3] = c_tbl[1]
 	elseif c_tbl[3] == nil then
-		-- greyscale with alpha
+		-- 2 digits, greyscale with alpha
 		c_tbl[2] = c_tbl[1]
 		c_tbl[3] = c_tbl[1]
 		c_tbl[4] = Kolor.translateAlpha( c_tbl[2] )
 	elseif c_tbl[4] == nil then
-		-- RGB, no alpha
+		-- 3 digits, RGB without alpha
 	else
-		-- RGB, with alpha
+		-- 4 digits, RGB with alpha
 		c_tbl[4] = Kolor.translateAlpha( c_tbl[4] )
 	end
 

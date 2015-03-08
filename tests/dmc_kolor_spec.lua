@@ -279,7 +279,7 @@ function test_hRGBdA_colorConversionsErrors()
 	assert_equal( Kolor.getColorFormat(), Kolor.hRGBdA, "incorrect format" )
 
 	assert_error( function()
-		c1 = { '#0F00FF', 255 }
+		c1 = { '#0F00FF', 255 } -- alpha is wrong for color format
 		c2 = { 15/255, 0/255, 255/255, 0.12 }
 		colorsAreNotEqual( c1, c2 )
 	end, "bad set format" )
