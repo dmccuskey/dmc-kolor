@@ -165,6 +165,17 @@ local function initialize()
 end
 
 
+--== Test Functions
+
+local function dAToTest( value )
+	return value
+end
+
+local function RGBToTest( value )
+	return value
+end
+
+
 --== Decimal Alpha to HDR
 
 local function dAToHDR( value )
@@ -184,9 +195,9 @@ end
 --== Decimal RGB to HDR
 
 local function dRGBToHDR( c_tbl )
-	assert( c_tbl[1]>=0 and c_tbl[1]<=1 )
-	assert( c_tbl[2]>=0 and c_tbl[2]<=1 )
-	assert( c_tbl[3]>=0 and c_tbl[3]<=1 )
+	assert( c_tbl[1]>=0 and c_tbl[1]<=1, "incorrect value for color component" )
+	assert( c_tbl[2]>=0 and c_tbl[2]<=1, "incorrect value for color component" )
+	assert( c_tbl[3]>=0 and c_tbl[3]<=1, "incorrect value for color component" )
 	if c_tbl[4] then
 		assert( c_tbl[4]>=0 and c_tbl[4]<=1, "incorrect range for alpha" )
 	end
@@ -200,18 +211,18 @@ end
 local function hRGBToHDR( c_tbl )
 	-- print( "hRGBToHDR" )
 	if c_tbl[2] == nil then
-		-- 1 digit, greyscale
+		-- greyscale
 		c_tbl[2] = c_tbl[1]
 		c_tbl[3] = c_tbl[1]
 	elseif c_tbl[3] == nil then
-		-- 2 digits, greyscale with alpha
+		-- greyscale with alpha
 		c_tbl[2] = c_tbl[1]
 		c_tbl[3] = c_tbl[1]
 		c_tbl[4] = Kolor.translateAlpha( c_tbl[2] )
 	elseif c_tbl[4] == nil then
-		-- 3 digits, RGB without alpha
+		-- RGB, no alpha
 	else
-		-- 4 digits, RGB with alpha
+		-- RGB, with alpha
 		c_tbl[4] = Kolor.translateAlpha( c_tbl[4] )
 	end
 
@@ -262,10 +273,31 @@ Kolor._FORMAT = nil -- set format
 Kolor._COLOR_FUNC = nil -- color trans function
 Kolor._ALPHA_FUNC = nil -- alpha trans function
 
+Kolor._RUN_MODE = 'run'
+Kolor.isTesting = Kolor._RUN_MODE=='run'
 
 
 --====================================================================--
 --== Public Functions
+
+
+--== Initialize Kolor Set
+
+function Kolor.initializeKolorSet( func, mode )
+	-- print( "Kolor.initializeKolorSet", mode )
+	assert( func, "Kolor.initializeKolorSet requires function" )
+	mode = mode or Kolor.dRGBA
+	--==--
+	local format = Kolor.getColorFormat()
+	Kolor.setColorFormat( mode )
+	func()
+	Kolor.setColorFormat( format )
+end
+
+function Kolor.setRunMode( mode )
+	Kolor._RUN_MODE = mode
+	Kolor.isTesting = ( Kolor._RUN_MODE=='run' )
+end
 
 
 --== Color Format
@@ -353,7 +385,10 @@ function Kolor._getTranslateFunctions( format )
 	assert( Utils.propertyIn( Kolor._VALID_FORMATS, format ), sfmt( "Kolor.setColorFormat unknown color format '%s'", tostring(format) ))
 	--==--
 	local c, a
-	if format == Kolor.dRGBA then
+	if Kolor.isTesting then
+		c = RGBToTest
+		a = dAToTest
+	elseif format == Kolor.dRGBA then
 		c = dRGBToHDR
 		a = dAToHDR
 	elseif format==Kolor.hRGBA then
@@ -369,10 +404,13 @@ end
 -- param c_tbl, array of color values
 --
 function Kolor._translateColor( c_tbl )
+	-- print( "Kolor._translateColor" )
 	local tstr = tostring
 	local color, tmp, key
 	local arg1 = c_tbl[1]
 	local arg1Type = type(arg1)
+
+	-- print( unpack( c_tbl ) )
 
 	if arg1Type=='number' then
 		-- regular RGB
@@ -396,6 +434,8 @@ function Kolor._translateColor( c_tbl )
 	else
 		error( sfmt("ERROR dmc_kolor: unknown RGB color type '%s'", type( arg1 ) ))
 	end
+
+	-- print( unpack( color ) )
 
 	return color
 end
