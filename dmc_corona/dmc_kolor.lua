@@ -432,7 +432,7 @@ function Kolor._translateColor( c_tbl )
 		color = Kolor.getNamedColor( arg1 )
 
 	else
-		error( sfmt("ERROR dmc_kolor: unknown RGB color type '%s'", type( arg1 ) ))
+		error( sfmt("ERROR dmc-kolor: unknown RGB color type '%s'", type( arg1 ) ))
 	end
 
 	-- print( unpack( color ) )
