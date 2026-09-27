@@ -410,3 +410,84 @@ function test_hdrColorFile()
 end
 
 
+
+
+--======================================================--
+-- Fixes, Sept 2026
+
+function test_greyscaleWithAlpha()
+	-- print( "test_greyscaleWithAlpha" )
+
+	Kolor.setColorFormat( Kolor.hRGBA )
+	colorsAreEqual( { 128 }, { 128/255, 128/255, 128/255 } )
+	colorsAreEqual( { 128, 64 }, { 128/255, 128/255, 128/255, 64/255 } )
+
+	Kolor.setColorFormat( Kolor.hRGBdA )
+	colorsAreEqual( { 128, 0.25 }, { 128/255, 128/255, 128/255, 0.25 } )
+
+end
+
+function test_coral()
+	-- print( "test_coral" )
+
+	local c2 = { 255/255, 127/255, 80/255 }
+	for _, file in ipairs{ 'hex', 'rgb', 'hdr' } do
+		Kolor.purgeNamedColors()
+		Kolor.importColorFile( 'dmc_kolor.named_colors_'..file )
+		local c1 = Kolor.getNamedColor( 'Coral' )
+		assert_true(
+			TestUtils.colorsAreEqual( c1, c2 ),
+			sfmt( "%s: %s<>%s", file, formatColor( c1 ), formatColor( c2 ) )
+		)
+	end
+
+end
+
+function test_noGlobalLeak()
+	-- print( "test_noGlobalLeak" )
+
+	Kolor.importColorFile( 'dmc_kolor.named_colors_hex' )
+	assert_nil( rawget( _G, 'color' ), "global 'color' set" )
+
+end
+
+function test_runMode()
+	-- print( "test_runMode" )
+
+	Kolor.setColorFormat( Kolor.hRGBA )
+	Kolor.setRunMode( 'test' )
+	colorsAreEqual( { 255, 0, 0 }, { 255, 0, 0 } )
+	Kolor.setRunMode( 'run' )
+	colorsAreEqual( { 255, 0, 0 }, { 1, 0, 0 } )
+
+end
+
+function test_version()
+	assert_equal( Kolor.VERSION, '2.0.1' )
+end
+
+function test_colorFileAliases()
+	-- print( "test_colorFileAliases" )
+
+	local function load( file )
+		Kolor.purgeNamedColors()
+		Kolor.importColorFile( 'dmc_kolor.named_colors_'..file )
+		local colors = Kolor._NAMED_COLORS
+		Kolor._NAMED_COLORS = nil
+		return colors
+	end
+
+	local hex = load( 'hex' )
+	for _, file in ipairs{ 'rgb', 'hdr' } do
+		local colors, count = load( file ), 0
+		for name, c1 in pairs( hex ) do
+			assert_true(
+				TestUtils.colorsAreEqual( c1, colors[ name ] ),
+				sfmt( "%s: %s", file, name )
+			)
+			count = count + 1
+		end
+		assert_equal( 144, count )
+	end
+
+end

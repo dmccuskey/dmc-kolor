@@ -19,7 +19,7 @@ local data = {
 	["Cadet Blue"] = "#5F9EA0",
 	["Chartreuse"] = "#7FFF00",
 	["Chocolate"] = "#D2691E",
-	["Coral"] = "#5F9EA0",
+	["Coral"] = "#FF7F50",
 	["Cornflower"] = "#6495ED",
 	["Cornsilk"] = "#FFF8DC",
 	["Crimson"] = "#DC143C",
@@ -147,8 +147,6 @@ local data = {
 	["White Smoke"] = "#F5F5F5",
 	["Yellow"] = "#FFFF00",
 	["Yellow Green"] = "#9ACD32",
-	["Dark Red"] = "#8B0000",
-	["Dark Red"] = "#8B0000"
 }
 
 

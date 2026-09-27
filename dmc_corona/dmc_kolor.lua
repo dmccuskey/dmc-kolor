@@ -1,7 +1,7 @@
 --====================================================================--
 -- dmc_kolor.lua
 --
--- Documentation: http://docs.davidmccuskey.com/
+-- Documentation: https://github.com/dmccuskey/dmc-kolor
 --====================================================================--
 
 --[[
@@ -33,13 +33,13 @@ SOFTWARE.
 
 
 --====================================================================--
---== DMC Corona Library : DMC Kozy
+--== DMC Corona Library : DMC Kolor
 --====================================================================--
 
 
 -- Semantic Versioning Specification: http://semver.org/
 
-local VERSION = "2.0.0"
+local VERSION = "2.0.1"
 
 
 
@@ -216,9 +216,9 @@ local function hRGBToHDR( c_tbl )
 		c_tbl[3] = c_tbl[1]
 	elseif c_tbl[3] == nil then
 		-- greyscale with alpha
+		c_tbl[4] = Kolor.translateAlpha( c_tbl[2] )
 		c_tbl[2] = c_tbl[1]
 		c_tbl[3] = c_tbl[1]
-		c_tbl[4] = Kolor.translateAlpha( c_tbl[2] )
 	elseif c_tbl[4] == nil then
 		-- RGB, no alpha
 	else
@@ -254,6 +254,8 @@ end
 
 Kolor = {}
 
+Kolor.VERSION = VERSION
+
 Kolor.dRGBA ='dRGBA'
 Kolor.hRGBA ='hRGBA'
 Kolor.hRGBdA ='hRGBdA'
@@ -274,7 +276,7 @@ Kolor._COLOR_FUNC = nil -- color trans function
 Kolor._ALPHA_FUNC = nil -- alpha trans function
 
 Kolor._RUN_MODE = 'run'
-Kolor.isTesting = Kolor._RUN_MODE=='run'
+Kolor.isTesting = Kolor._RUN_MODE=='test'
 
 
 --====================================================================--
@@ -296,7 +298,8 @@ end
 
 function Kolor.setRunMode( mode )
 	Kolor._RUN_MODE = mode
-	Kolor.isTesting = ( Kolor._RUN_MODE=='run' )
+	Kolor.isTesting = ( Kolor._RUN_MODE=='test' )
+	if Kolor._FORMAT then Kolor.setColorFormat( Kolor._FORMAT ) end
 end
 
 
@@ -451,6 +454,7 @@ function Kolor._processColors( tbl, data, color_f, alpha_f )
 	-- string or table
 	local function translateColor( value )
 		local val_type = type(value)
+		local color
 
 		if val_type=='table' then
 			color = color_f( value )
