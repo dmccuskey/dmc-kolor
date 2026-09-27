@@ -1,146 +1,121 @@
 --====================================================================--
 -- Kolor Basic
 --
--- Shows simple use of the Kolor library
---
--- by David McCuskey
+-- Every kind of color dmc-kolor translates: 0-255 values, hex strings,
+-- named colors, gradients, and a switch of format for a block of code.
+-- The default format (hRGBA) and the named-color file are set in
+-- dmc_corona.cfg.
 --
 -- Sample code is MIT licensed, the same license which covers Lua itself
 -- http://en.wikipedia.org/wiki/MIT_License
--- Copyright (C) 2013-2014 David McCuskey. All Rights Reserved.
+-- Copyright (C) 2013-2015 David McCuskey. All Rights Reserved.
 --====================================================================--
 
-print("---------------------------------------------------")
 
---===================================================================--
--- Imports
---===================================================================--
 
--- just need to require the module
-local display = require( 'dmc_kolor' )
+print( '\n\n##############################################\n\n' )
 
 
 
 --===================================================================--
--- Setup, Constants
---===================================================================--
+--== Imports
+
+
+local Kolor = require 'dmc_corona.dmc_kolor'
 
 
 
 --===================================================================--
--- Kolor Support
---===================================================================--
+--== Setup, Constants
 
 
---== Test Polygon
+display.setStatusBar( display.HiddenStatusBar )
 
-local vertices = { 0,-110, 27,-35, 105,-35, 43,16, 65,90, 0,45, -65,90, -43,15, -105,-35, -27,-35, }
-local newPoly1 = display.newPolygon( 150, 200, vertices )
-newPoly1.strokeWidth = 10
-newPoly1:setStrokeColor( "Dark Magenta" )
-newPoly1:setFillColor( 255, 255, 0 )
+local W, H = display.contentWidth, display.contentHeight
+local tc = Kolor.translateColor
 
-local newPoly2 = display.newPolygon( 325, 200, vertices )
-newPoly2.strokeWidth = 10
-newPoly2:setStrokeRGB( "Dark Magenta" )
-newPoly2:setFillRGB( 255, 255, 0 )
-
-local newPoly3 = display.newPolygon( 500, 200, vertices )
-newPoly3.strokeWidth = 10
-newPoly3:setStrokeHDR( .55, 0, .55 )
-newPoly3:setFillHDR( 1, 1, 0 )
+local SIZE = 56
+local COLUMNS = { W*0.14, W*0.38, W*0.62, W*0.86 }
 
 
---== Test Circle
 
-local newCircle1 = display.newCircle( 150, 375, 30 )
-newCircle1:setFillColor( "Chartreuse" )
-newCircle1.strokeWidth = 5
-newCircle1:setStrokeColor( 150, 150, 150 )
-
-local newCircle2 = display.newCircle( 325, 375, 30 )
-newCircle2:setFillRGB( "Chartreuse" )
-newCircle2.strokeWidth = 5
-newCircle2:setStrokeRGB( 150, 150, 150 )
-
-local newCircle3 = display.newCircle( 500, 375, 30 )
-newCircle3:setFillHDR( .5, 1, 0 )
-newCircle3.strokeWidth = 5
-newCircle3:setStrokeHDR( .5, .5, .5 )
+--====================================================================--
+--== Support Functions
 
 
---== Test Rect
+local function newHeading( text, y )
+	local o = display.newText( text, 16, y, native.systemFontBold, 14 )
+	o.anchorX = 0
+	o:setFillColor( unpack( tc( 'White Smoke' ) ) )
+	return o
+end
 
-local rect1 = display.newRect( 200, 700, 100, 200 )
-rect1:setFillColor( "Misty Rose" )
-rect1.strokeWidth = 5
-rect1:setStrokeColor( 180, 50, 100 )
+-- a swatch filled with color, with the value it was made from below it
+local function newSwatch( column, y, color, label )
+	local o = display.newRoundedRect( COLUMNS[ column ], y, SIZE, SIZE, 8 )
+	o.fill = color
+	local t = display.newText( label, COLUMNS[ column ], y+SIZE/2+10, native.systemFont, 10 )
+	t:setFillColor( unpack( tc( 'Light Gray' ) ) )
+	return o
+end
 
--- even RGB gradients get translated !!
 
-local gradient = {
-    type="gradient",
-    color1={ 255, 255, 255 }, color2={ 150, 150, 150 }, direction="down"
+
+--====================================================================--
+--== Main
+
+
+print( "default color format:", Kolor.getColorFormat() )
+
+display.newRect( W/2, H/2, W, H ).fill = tc( 30, 30, 36 )
+
+local title = display.newText( 'dmc-kolor', W/2, 28, native.systemFontBold, 24 )
+title:setFillColor( unpack( tc( 'Gold' ) ) )
+
+
+--== 0-255 values, the default format here (hRGBA)
+
+newHeading( 'hRGBA: 0-255, alpha too', 64 )
+newSwatch( 1, 106, tc( 255, 99, 71 ), '255,99,71' )
+newSwatch( 2, 106, tc( 60, 179, 113 ), '60,179,113' )
+newSwatch( 3, 106, tc( 70, 130, 180, 128 ), '70,130,180,128' )
+newSwatch( 4, 106, tc( 200 ), '200 (grey)' )
+
+
+--== hex strings, with an optional alpha
+
+newHeading( 'Hex strings', 166 )
+newSwatch( 1, 208, tc( '#FF6347' ), '#FF6347' )
+newSwatch( 2, 208, tc( '#3cb371' ), '#3cb371' )
+newSwatch( 3, 208, tc( '#4682B4', 128 ), "'#4682B4', 128" )
+newSwatch( 4, 208, tc( '#FFD700' ), '#FFD700' )
+
+
+--== named colors, from the file in dmc_corona.cfg
+
+newHeading( 'Named colors (X11)', 268 )
+newSwatch( 1, 310, tc( 'Tomato' ), 'Tomato' )
+newSwatch( 2, 310, tc( 'Medium Sea Green' ), 'Medium Sea Green' )
+newSwatch( 3, 310, tc( 'steel blue' ), 'steel blue' )
+newSwatch( 4, 310, tc( 'Orchid' ), 'Orchid' )
+
+
+--== gradients: both colors are translated
+
+newHeading( 'Gradients', 370 )
+local bar = display.newRoundedRect( W/2, 406, W-32, 36, 8 )
+bar.fill = tc{
+	type='gradient',
+	color1={ 255, 99, 71 },
+	color2='Steel Blue',
+	direction='right',
 }
-local rect2 = display.newRect( 400, 700, 100, 200 )
-rect2:setFillColor( gradient )
-rect2.strokeWidth = 5
-rect2:setStrokeColor( 150, 150, 150 )
 
 
---== Test Text
+--== another format for a block of code
 
-local myText1 = display.newText( "hello there", 150, 475, native.systemFontBold, 20 )
-myText1:setFillColor( "Turquoise" )
-
-local myText2 = display.newText( "hello there", 325, 475, native.systemFontBold, 20 )
-myText2:setFillColor( 64, 224, 208 )
-
-local myText3 = display.newText( "hello there", 500, 475, native.systemFontBold, 20 )
-myText3:setFillHDR( .25, .88, .82 )
-
-
---== Test Line
-
-local x1, x2, y1, y2
-
-x1, x2, y1, y2 = 125, 175, 900, 950
-
-local star1 = display.newLine( x1,y1, x2,y1 )
-star1:append( x2,y2, x1,y2, x1,y1 )
-star1.strokeWidth = 15
-star1:setStrokeColor( 150, 150, 150 )  -- << bug here, use setStrokeRGB
-star1:setStrokeRGB( 150, 150, 150 )  -- << bug here, use setStrokeRGB
-
-x1, x2, y1, y2 = 275, 325, 900, 950
-
-local star2 = display.newLine( x1,y1, x2,y1 )
-star2:append( x2,y2, x1,y2, x1,y1 )
-star2.strokeWidth = 15
-star2:setStrokeRGB( 150, 150, 150 )  -- << bug here, use setStrokeRGB
-
-
-
---[[
---== Test Text Box
-
-local textBox1 = native.newTextBox( 30, 140, 260, 150 )
-textBox1:setTextColor( 200, 250, 250, 255 )
-
-local textBox2 = native.newTextBox( 30, 140, 260, 150 )
-textBox2:setTextColor( 200, 250, 250, 255 )
-
-
---== Test Text Field
-
-local field1 = native.newTextField( 250, 100, 100, 35 )
-field1.text = "hello there my friend"
-field1:setTextColor( 255, 0, 150 )
-
-local field2 = native.newTextField( 50, 100, 100, 35 )
-field2.text = "hello there my friend"
-field2:setTextColor( 0, 150, 255 )
---]]
-
-
-
+newHeading( 'dRGBA (0-1) inside initializeKolorSet()', 442 )
+Kolor.initializeKolorSet( function()
+	local line = display.newRect( W/2, 464, W-32, 6 )
+	line.fill = tc( 1, 0.84, 0 )
+end, Kolor.dRGBA )

@@ -23,6 +23,10 @@ module_config = {
 	"examples": {
 		"base_dir": "examples",
 		"apps": [
+			{
+				"exp_dir": "dmc-kolor-basic",
+				"requires": []
+			}
 		]
 	},
 	"tests": {
