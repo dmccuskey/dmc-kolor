@@ -17,7 +17,7 @@ text:setFillColor( unpack( Kolor.translateColor( 'Steel Blue' ) ) )
 ## Features
 
 - Three formats for color values: 0-1 (Solar2D's own), 0-255, or 0-255 with a 0-1 alpha
-- Hex strings, `'#FFB422'`, with an optional alpha
+- Hex strings, `'#FFB422'`, `'#FB2'` or `'#FFB42280'`, with an optional alpha
 - Named colors: the X11 colors come with it, or add your own
 - Gradients: both of a gradient's colors are translated
 - Set the format and the named colors once, in `dmc_corona.cfg`, or switch the format for a block of code
@@ -125,7 +125,7 @@ hRGBA	0.49803921568627	1	0
 
 <img src="docs/images/quick-start-named.png" width="200" alt="A chartreuse square with a dark magenta border, a circle fading from orange to purple, and the text dmc-kolor in gold">
 
-Names aren't case-sensitive: `'steel blue'` works too. An unknown name gives `nil` instead of a color, with no warning.
+Names aren't case-sensitive: `'steel blue'` works too. A name that isn't there raises an error at your line: `main.lua:7: dmc_kolor: unknown color name 'Chartruse'`.
 
 **Going further:** the formats, hex strings with alpha, your own named colors and the full API are in the [API reference](docs/api.md); the [example](examples/) shows every kind of color on one screen.
 
@@ -133,7 +133,7 @@ To update, copy `dmc_corona_boot.lua` and `dmc_corona/` again from the newer ver
 
 ## Documentation
 
-- [API reference](docs/api.md): the color formats, `translateColor()`, named colors and color files, configuration, known issues
+- [API reference](docs/api.md): the color formats, `translateColor()`, named colors and color files, configuration, errors
 - [Examples](examples/): every kind of color dmc-kolor translates, on one screen
 
 Everything else is listed on the [documentation home](docs/README.md).

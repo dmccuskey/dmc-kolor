@@ -8,7 +8,7 @@ New here? The [Quick Start](../README.md#quick-start) draws shapes in 0-255, hex
 
 ## Use
 
-- [API reference](api.md): the color formats, `translateColor()`, named colors and color files, configuration, known issues
+- [API reference](api.md): the color formats, `translateColor()`, named colors and color files, configuration, errors
 - [Examples](../examples/): every kind of color dmc-kolor translates, on one screen
 
 ## Contribute
@@ -20,6 +20,7 @@ New here? The [Quick Start](../README.md#quick-start) draws shapes in 0-255, hex
 
 ```text
 README.md                   landing page and Quick Start
+CHANGELOG.md                what changed in each version
 LICENSE
 docs/                       this documentation
 └── images/                 screenshots for the README
@@ -28,8 +29,8 @@ dmc_corona/                 what apps copy
 └── dmc_kolor/              the X11 named colors (source)
 dmc_corona_boot.lua         loader, from dmc-corona-boot (generated copy)
 dmc_corona.cfg              library configuration
-main.lua                    runs the unit tests
-tests/                      unit tests (lunatest)
+main.lua                    runs the unit tests in the Simulator
+tests/                      unit tests (lunatest); run_unit.sh runs them with Lua 5.1
 examples/                   sample app, with its own generated dmc_corona/
 └── screenshots/            one per app, for examples/README.md
 Snakefile                   build rules for the generated copies
