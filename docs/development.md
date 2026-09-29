@@ -8,7 +8,7 @@ How dmc-kolor is built and tested, and what could change.
 
 The `dmc_corona.cfg` files, at the root and in the example, aren't generated: edit them here.
 
-dmc-kolor uses no other DMC library; its copy of `Utils.extend()` is built in.
+dmc-kolor uses no other DMC library, not even DMC-Lua-Library: it merges its configuration with a plain loop.
 
 ## Building
 
@@ -23,20 +23,16 @@ The build copies the sibling checkouts as they are on disk, on whatever branch e
 
 ## Testing
 
-The unit tests in `tests/dmc_kolor_spec.lua` use lunatest and need nothing from Solar2D. The root `main.lua` runs them, so open it in the Solar2D Simulator, or run it with Lua 5.1 from this folder:
+The unit tests in `tests/dmc_kolor_spec.lua` use lunatest and need nothing from Solar2D. Run them with Lua 5.1 from this folder:
 
 ```sh
-LUA_PATH='./?.lua;./dmc_corona/?.lua' lua main.lua
+tests/run_unit.sh                  # uses ../tools/lua51/bin/lua; set LUA= for another
 ```
 
-The last line should read `17 passed, 0 failed, 0 error(s), 0 skipped.` The tests cover the three formats, grey, hex strings, the color file, and that its deprecated aliases give the same colors.
+The last line should read `28 passed, 0 failed, 0 error(s), 0 skipped.` The root `main.lua` runs the same tests in the Solar2D Simulator. They cover the three formats, grey, the hex forms, names with an alpha, gradients translated as copies, the range checks and where errors are raised, the color file and its deprecated aliases.
 
 `Kolor.setRunMode( 'test' )` turns translation off (colors are returned as given), for tests of code that uses dmc-kolor; `Kolor.setRunMode( 'run' )` turns it back on. For what they don't cover (drawing), run the example in the Simulator.
 
 ## Possible Future Changes
 
-Each needs discussion and a concrete use case before it is worked on. The bugs are listed in the API reference's [Known Issues](api.md#known-issues).
-
-- Warn about an unknown color name, or make it an error.
-- Accept `'#RGB'` and `'#RRGGBBAA'` hex strings, and an alpha with a name.
-- Return copies, so that callers can't change named colors, and translate gradients into a new table.
+None planned: the known issues of 2.0 are fixed in 2.1.0 ([changelog](../CHANGELOG.md)). New ideas go in the [issues](https://github.com/dmccuskey/dmc-kolor/issues), and need discussion and a concrete use case before they are worked on.

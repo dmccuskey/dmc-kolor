@@ -463,7 +463,7 @@ function test_runMode()
 end
 
 function test_version()
-	assert_equal( Kolor.VERSION, '2.0.1' )
+	assert_equal( Kolor.VERSION, '2.1.0' )
 end
 
 function test_colorFileAliases()
@@ -487,7 +487,220 @@ function test_colorFileAliases()
 			)
 			count = count + 1
 		end
-		assert_equal( 144, count )
+		assert_equal( 149, count )
 	end
+
+end
+
+
+--======================================================--
+-- Fixes, 2.1.0
+
+-- an error raised by func, its message; fails if there is none
+local function errorOf( func )
+	local ok, err = pcall( func )
+	assert_false( ok, "expected an error" )
+	return tostring( err )
+end
+
+-- the error is raised at the caller's line: this file
+local function assertCallerError( func, text )
+	local err = errorOf( func )
+	assert_match( 'dmc_kolor_spec.lua:%d+: dmc_kolor: ', err )
+	if text then
+		assert_true( err:find( text, 1, true )~=nil, sfmt( "'%s' not in '%s'", text, err ) )
+	end
+end
+
+function test_plainNames()
+	-- print( "test_plainNames" )
+
+	Kolor.importColorFile( 'dmc_kolor.named_colors_hex' )
+	for plain, full in pairs{
+		Green='Green-X11', Maroon='Maroon-X11', Purple='Purple-X11',
+		Lime='Lime-W3C', Silver='Silver-W3C', Gray='Gray-X11',
+	} do
+		local c1, c2 = Kolor.translateColor( plain ), Kolor.getNamedColor( full )
+		assert_true( TestUtils.colorsAreEqual( c1, c2 ), plain )
+	end
+
+end
+
+function test_unknownName()
+	-- print( "test_unknownName" )
+
+	Kolor.setColorFormat( Kolor.dRGBA )
+	assertCallerError( function()
+		Kolor.translateColor( 'Navy' )
+	end, "no named colors are loaded" )
+
+	Kolor.importColorFile( 'dmc_kolor.named_colors_hex' )
+	assertCallerError( function()
+		Kolor.translateColor( 'Nvy' )
+	end, "unknown color name 'Nvy'" )
+	-- a hex string without '#' is a name
+	assertCallerError( function()
+		Kolor.translateColor( 'FF00FF' )
+	end, "unknown color name 'FF00FF'" )
+	assertCallerError( function()
+		Kolor.translateColor( true )
+	end, "unknown RGB color type 'boolean'" )
+
+	-- a lookup still gives nil
+	assert_nil( Kolor.getNamedColor( 'Nvy' ) )
+
+end
+
+function test_nameWithAlpha()
+	-- print( "test_nameWithAlpha" )
+
+	Kolor.importColorFile( 'dmc_kolor.named_colors_hex' )
+
+	Kolor.setColorFormat( Kolor.hRGBA )
+	colorsAreEqual( { 'Navy', 51 }, { 0, 0, 128/255, 51/255 } )
+	colorsAreEqual( { 'Navy' }, { 0, 0, 128/255 } )
+
+	Kolor.setColorFormat( Kolor.dRGBA )
+	colorsAreEqual( { 'navy', 0.5 }, { 0, 0, 128/255, 0.5 } )
+	assertCallerError( function()
+		Kolor.translateColor( 'Navy', 128 )
+	end, "alpha must be a number from 0 to 1" )
+
+end
+
+function test_greyInDRGBA()
+	-- print( "test_greyInDRGBA" )
+
+	Kolor.setColorFormat( Kolor.dRGBA )
+	colorsAreEqual( { 0.5 }, { 0.5, 0.5, 0.5 } )
+	colorsAreEqual( { 0.5, 0.25 }, { 0.5, 0.5, 0.5, 0.25 } )
+
+end
+
+function test_hexForms()
+	-- print( "test_hexForms" )
+
+	Kolor.setColorFormat( Kolor.hRGBA )
+	colorsAreEqual( { '#F0F' }, { 1, 0, 1 } )
+	colorsAreEqual( { '#f0f8' }, { 1, 0, 1, 0x88/255 } )
+	colorsAreEqual( { '#FF00FF80' }, { 1, 0, 1, 128/255 } )
+	-- an alpha given replaces the hex one
+	colorsAreEqual( { '#FF00FF80', 51 }, { 1, 0, 1, 51/255 } )
+
+	for _, hex in ipairs{ '#', '#12', '#12345', '#1234567', '#GG0000', '# FF00FF' } do
+		assertCallerError( function()
+			Kolor.translateColor( hex )
+		end, sfmt( "got '%s'", hex ) )
+	end
+
+end
+
+function test_gradientCopy()
+	-- print( "test_gradientCopy" )
+
+	Kolor.setColorFormat( Kolor.hRGBA )
+	local grad = {
+		type='gradient',
+		color1={ 255, 0, 0 },
+		color2={ '#0000FF', 128 },
+		direction='down',
+	}
+	local g1 = Kolor.translateColor( grad )
+	local g2 = Kolor.translateColor( grad )
+
+	assert_not_equal( grad, g1 )
+	assert_equal( 'down', g1.direction )
+	for _, g in ipairs{ g1, g2 } do
+		assert_true( TestUtils.colorsAreEqual( g.color1, { 1, 0, 0 } ) )
+		assert_true( TestUtils.colorsAreEqual( g.color2, { 0, 0, 1, 128/255 } ) )
+	end
+	-- the caller's table is left as it was
+	assert_true( TestUtils.colorsAreEqual( grad.color1, { 255, 0, 0 } ) )
+	assert_equal( '#0000FF', grad.color2[1] )
+
+	-- an error in a gradient's color is raised at the caller's line too
+	assertCallerError( function()
+		Kolor.translateColor{ type='gradient', color1={ 300, 0, 0 }, color2='#000' }
+	end, "got 300" )
+
+end
+
+function test_otherPaint()
+	-- print( "test_otherPaint" )
+
+	local paint = { type='image', filename='wood.png' }
+	assert_equal( paint, Kolor.translateColor( paint ) )
+
+end
+
+function test_copies()
+	-- print( "test_copies" )
+
+	Kolor.importColorFile( 'dmc_kolor.named_colors_hex' )
+	local c1 = Kolor.getNamedColor( 'Navy' )
+	c1[1] = 1
+	Kolor.translateColor( 'Navy' )[2] = 1
+	colorsAreEqual( 'Navy', { 0, 0, 128/255 } )
+
+	Kolor.setColorFormat( Kolor.dRGBA )
+	local t = { 0.1, 0.2, 0.3 }
+	assert_not_equal( t, Kolor.translateColor( t ) )
+
+end
+
+function test_rangeChecks()
+	-- print( "test_rangeChecks" )
+
+	Kolor.setColorFormat( Kolor.hRGBA )
+	for _, c in ipairs{ { 300, 0, 0 }, { 0, -1, 0 }, { 0, 0, 256 }, { 256 } } do
+		assertCallerError( function()
+			Kolor.translateColor( c )
+		end, "color value must be a number from 0 to 255" )
+	end
+	assertCallerError( function()
+		Kolor.translateColor( 0, 0, 0, 300 )
+	end, "alpha must be a number from 0 to 255" )
+	assertCallerError( function()
+		Kolor.translateColor( 0, '0', 0 )
+	end, "got 0" )
+
+	Kolor.setColorFormat( Kolor.hRGBdA )
+	assertCallerError( function()
+		Kolor.translateColor( 0, 0, 0, 2 )
+	end, "alpha must be a number from 0 to 1" )
+
+	Kolor.setColorFormat( Kolor.dRGBA )
+	assertCallerError( function()
+		Kolor.translateColor( 1.5, 0, 0 )
+	end, "color value must be a number from 0 to 1" )
+	assertCallerError( function()
+		Kolor.translateAlpha( 2 )
+	end, "alpha must be a number from 0 to 1" )
+
+end
+
+function test_initializeKolorSetError()
+	-- print( "test_initializeKolorSetError" )
+
+	Kolor.setColorFormat( Kolor.hRGBA )
+	local err = errorOf( function()
+		Kolor.initializeKolorSet( function() error( "boom" ) end, Kolor.dRGBA )
+	end )
+	assert_match( 'boom', err )
+	assert_equal( Kolor.hRGBA, Kolor.getColorFormat() )
+
+end
+
+function test_addColorsAlpha()
+	-- print( "test_addColorsAlpha" )
+
+	-- the alpha is read in the colors' format, not the current one
+	Kolor.setColorFormat( Kolor.dRGBA )
+	Kolor.addColors( { Brand={ 0, 85, 170, 51 } }, { format=Kolor.hRGBA } )
+	colorsAreEqual( 'brand', { 0, 85/255, 170/255, 51/255 } )
+
+	assertCallerError( function()
+		Kolor.addColors( { Bad=true } )
+	end, "color 'Bad' must be a hex string or a table" )
 
 end
